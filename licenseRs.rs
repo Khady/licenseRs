@@ -54,16 +54,13 @@ fn get_year(args: Option<~str>) -> ~str {
     }
 }
 
-fn load_file_template(file: ~str) -> ~str {
-    io::println(file);
+fn load_file_template(file: ~str) -> ~[u8] {
     let open_file = &io::file_reader(&Path(file));
-    let test_reader = result::get(open_file);
-    test_reader.each_line(fn@ (line: &str) -> bool {
-        io::println(line);
-        true
-    });
-   // check if file exist. If true, replace with a regexp. Else raise an error
-    ~"error"
+    if result::is_err(open_file) {
+        fail!(~"Cannot open license file");
+    }
+    let license = result::get(open_file);
+    license.read_whole_stream()
 }
 
 fn main() {
@@ -104,6 +101,8 @@ fn main() {
     context.insert(~"license", get_license(license));
 
     let template = load_file_template(~"template-" + *context.get(&~"license") + ~".txt");
+    let template_str = str::from_bytes(template);
+    io::println(template_str);
     // io::println(template);
     // let content = generate_license(template);
 }
