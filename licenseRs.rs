@@ -7,11 +7,11 @@ use core::io::ReaderUtil;
 
 fn print_usage(program: &str, _opts: &[std::getopts::Opt]) {
     io::println(fmt!("Usage: %s [options]", program));
-    io::println("-o\t\tOutput");
+    io::println("--proj\t\tProject name");
+    io::println("--year\t\tYear");
+    io::println("--org\t\tOrganization");
     io::println("-h --help\tUsage");
 }
-
-// fn make_absolute(p: &Path) -> Path
 
 fn get_license(args: Option<~str>) -> ~str {
     match args {
@@ -89,20 +89,19 @@ fn main() {
     let org = opt_maybe_str(&matches, ~"org");
     let license = opt_maybe_str(&matches, ~"license");
 
-    // io::println(get_year(year));
-    // io::println(get_proj(proj));
-    // io::println(get_org(org));
-    // io::println(get_license(license));
-
     let mut context: LinearMap<~str, ~str> = LinearMap::new::<~str, ~str>();
     context.insert(~"year", get_year(year));
-    context.insert(~"proj", get_proj(proj));
-    context.insert(~"org", get_org(org));
+    context.insert(~"project", get_proj(proj));
+    context.insert(~"organization", get_org(org));
     context.insert(~"license", get_license(license));
 
     let template = load_file_template(~"template-" + *context.get(&~"license") + ~".txt");
-    let template_str = str::from_bytes(template);
+    let mut template_str = str::from_bytes(template);
+
+    let keys : [~str * 3] = [~"year", ~"project", ~"organization"];
+
+    for keys.each |k| {
+        template_str = str::replace(template_str, ~"{{ " + *k + ~" }}", *context.get(k));
+    }
     io::println(template_str);
-    // io::println(template);
-    // let content = generate_license(template);
 }
