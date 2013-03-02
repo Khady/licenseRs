@@ -60,6 +60,15 @@ fn get_year(args: Option<~str>) -> ~str {
     }
 }
 
+fn get_template_path(args: Option<~str>, context: @ mut LinearMap<~str, ~str>) -> ~str {
+    match args {
+        Some(x) => x,
+        None => {
+            ~"template-" + *context.get(&~"license") + ~".txt"
+        }
+    }
+}
+
 fn load_file_template(file: ~str) -> ~[u8] {
     let open_file = &io::file_reader(&Path(file));
     if result::is_err(open_file) {
@@ -69,7 +78,7 @@ fn load_file_template(file: ~str) -> ~[u8] {
     license.read_whole_stream()
 }
 
-fn replace_keys(origin_template: ~[u8], context: LinearMap<~str, ~str>) {
+fn replace_keys(origin_template: ~[u8], context: @ mut LinearMap<~str, ~str>) {
     let mut template = str::from_bytes(origin_template);
     let keys : [~str * 3] = [~"year", ~"project", ~"organization"];
     for keys.each |k| {
@@ -94,8 +103,8 @@ fn get_template_vars(template: ~str) -> ~[~str] {
 fn display_template_vars(origin_template: ~[u8]) {
     let mut template = str::from_bytes(origin_template);
     let vars = get_template_vars(template);
-    for vars.each |var| {
-        io::println(*var);
+    for vars.each |&var| {
+        io::println(var);
     }
 }
 
@@ -126,15 +135,16 @@ fn main() {
     let proj = opt_maybe_str(&matches, ~"proj");
     let org = opt_maybe_str(&matches, ~"org");
     let license = opt_maybe_str(&matches, ~"license");
-    let template_path = opt_maybe_str(&matches, ~"template_path");
+    let template_arg = opt_maybe_str(&matches, ~"template");
 
-    let mut context: LinearMap<~str, ~str> = LinearMap::new();
+    let context: @ mut LinearMap<~str, ~str> = @ mut LinearMap::new();
     context.insert(~"year", get_year(year));
     context.insert(~"project", get_proj(proj));
     context.insert(~"organization", get_org(org));
     context.insert(~"license", get_license(license));
 
-    let template = load_file_template(~"template-" + *context.get(&~"license") + ~".txt");
+    let template_path = get_template_path(template_arg, context);
+    let template = load_file_template(template_path);
 
     if opt_present(&matches, "vars") {
         display_template_vars(template);
