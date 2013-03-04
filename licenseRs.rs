@@ -16,6 +16,7 @@ fn print_usage(program: &str, _opts: &[std::getopts::Opt]) {
     io::println("--license\tThe license to generate, one of: agpl3, apache, bsd2, \
                  bsd3, cddl, cc0, epl, gpl2, gpl3, lgpl, mit, mpl");
     io::println("--template\tPath to license template file");
+    io::println("--header\tGenerate header file instead of the license");
     io::println("--vars\t\tList template variables for specified license");
 }
 
@@ -60,11 +61,16 @@ fn get_year(args: Option<~str>) -> ~str {
     }
 }
 
-fn get_template_path(args: Option<~str>, context: @ mut LinearMap<~str, ~str>) -> ~str {
+fn get_template_path(args: Option<~str>, context: @ mut LinearMap<~str, ~str>, header: bool) -> ~str {
     match args {
         Some(x) => x,
         None => {
-            ~"template-" + *context.get(&~"license") + ~".txt"
+            let license = context.get(&~"license");
+            if header {
+                ~"template-" + *license + ~"-header.txt"
+            } else {
+                ~"template-" + *license + ~".txt"
+            }
         }
     }
 }
@@ -93,7 +99,12 @@ fn get_template_vars(template: ~str) -> ~[~str] {
     for vars_tmp.each |&var| {
         let end = str::find_str(var, "}}");
         match end {
-            Some(pos) => { vars.push(var.substr(0, pos).trim()) },
+            Some(pos) => {
+                let var_name = var.substr(0, pos).trim();
+                if !vars.contains(&var_name) {
+                    vars.push(var_name);
+                }
+            },
             None => { }
         }
     }
@@ -117,6 +128,7 @@ fn main() {
         optflag(~"h"),
         optflag(~"help"),
         optflag(~"vars"),
+        optflag(~"header"),
         optopt(~"year"),
         optopt(~"proj"),
         optopt(~"org"),
@@ -136,6 +148,7 @@ fn main() {
     let org = opt_maybe_str(&matches, ~"org");
     let license = opt_maybe_str(&matches, ~"license");
     let template_arg = opt_maybe_str(&matches, ~"template");
+    let header = opt_present(&matches, "header");
 
     let context: @ mut LinearMap<~str, ~str> = @ mut LinearMap::new();
     context.insert(~"year", get_year(year));
@@ -143,7 +156,7 @@ fn main() {
     context.insert(~"organization", get_org(org));
     context.insert(~"license", get_license(license));
 
-    let template_path = get_template_path(template_arg, context);
+    let template_path = get_template_path(template_arg, context, header);
     let template = load_file_template(template_path);
 
     if opt_present(&matches, "vars") {
